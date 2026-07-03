@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Databases (local sqlite data)
+*.sqlite3
+
+# Pytest and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration environment files
+.env
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Other
+notes.txt

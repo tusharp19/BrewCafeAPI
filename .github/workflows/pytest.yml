@@ -1,0 +1,32 @@
+name: Django CI Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    # 1. Install pipenv globally on the temporary runner
+    - name: Install Pipenv
+      run: pip install pipenv
+
+    # 2. Tell pipenv to install all dependencies from your Pipfile directly into the runner environment
+    - name: Install Dependencies from Pipfile
+      run: pipenv install --system --dev
+
+    # 3. Run your 23 tests
+    - name: Run Test Suite
+      run: pytest
