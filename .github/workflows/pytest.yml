@@ -27,6 +27,6 @@ jobs:
     - name: Install Dependencies from Pipfile
       run: pipenv install --system --dev
 
-    # 3. Run your 23 tests
+    # 3. Run your 28 tests
     - name: Run Test Suite
-      run: pipenv run pytest
+      run: pytest
