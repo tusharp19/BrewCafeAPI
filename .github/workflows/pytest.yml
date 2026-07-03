@@ -25,8 +25,8 @@ jobs:
 
     # 2. Tell pipenv to install all dependencies from your Pipfile directly into the runner environment
     - name: Install Dependencies from Pipfile
-      run: pipenv install --system --dev
+      run: pipenv install --dev
 
     # 3. Run your 28 tests
     - name: Run Test Suite
-      run: pytest
+      run: pipenv run pytest
