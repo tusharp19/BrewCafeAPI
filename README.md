@@ -8,7 +8,7 @@ A robust, role-based backend REST API built using Python and Django REST Framewo
 * **Roles Matrix:** Enforces separate workflow privileges for Customers, Managers, and Delivery Crew.
 
 ## Technical Execution & CI/CD
-* **Testing Engine:** Powered by `pytest` and `pytest-django` utilizing an isolated, modular `conftest.py` setup.
+* **Testing Engine:** 28 tests powered by `pytest` and `pytest-django` utilizing an isolated, modular `conftest.py` setup.
 * **Automation:** An automated CI/CD pipeline built via **GitHub Actions** runs the 23-test validation suite on every single code push.
 
 ## Setup Instructions
