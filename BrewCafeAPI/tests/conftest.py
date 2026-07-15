@@ -1,6 +1,6 @@
 import pytest
 from rest_framework.test import APIClient
-from LittleLemonAPI.models import Category,MenuItem,Order
+from BrewCafeAPI.models import Category,MenuItem,Order
 from django.contrib.auth.models import Group,User
 from django.utils import timezone
 

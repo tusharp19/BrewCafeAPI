@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from LittleLemonAPI.models import Category,MenuItem
+from BrewCafeAPI.models import Category,MenuItem
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("desserts, mains", [

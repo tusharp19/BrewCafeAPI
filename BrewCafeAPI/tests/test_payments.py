@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from rest_framework import status
-from LittleLemonAPI.models import Status
+from BrewCafeAPI.models import Status
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("user,expected_response",[
@@ -10,7 +10,7 @@ from LittleLemonAPI.models import Status
     ("other_user",status.HTTP_404_NOT_FOUND),
     (None,status.HTTP_401_UNAUTHORIZED)
 ])
-@patch('LittleLemonAPI.views.PaymentInterface.make_payment')
+@patch('BrewCafeAPI.views.PaymentInterface.make_payment')
 def test_user_allowed_to_pay(fake_payment,request,new_client,new_user_order,user,expected_response):
     if user:
         testuser=request.getfixturevalue(user)
@@ -20,11 +20,11 @@ def test_user_allowed_to_pay(fake_payment,request,new_client,new_user_order,user
         'transaction_id': 'MOCK_SUCCESS',
         'error_code': None
     }
-    response=new_client.post(f'/api/orders/{new_user_order.id}/pay',data={"token":"tok_success"})
+    response=new_client.post(f'/api/orders/{new_user_order.id}/pay/',data={"token":"tok_success"})
     assert response.status_code==expected_response
     
 @pytest.mark.django_db
-@patch('LittleLemonAPI.views.PaymentInterface.make_payment')
+@patch('BrewCafeAPI.views.PaymentInterface.make_payment')
 def test_payment_success_path(fake_payment,new_client,new_user,new_user_order):
     fake_payment.return_value={
         'success': True,
@@ -32,7 +32,7 @@ def test_payment_success_path(fake_payment,new_client,new_user,new_user_order):
         'error_code': None
     }
     new_client.force_authenticate(new_user)
-    response=new_client.post(f'/api/orders/{new_user_order.id}/pay',data={"token":"tok_success"})
+    response=new_client.post(f'/api/orders/{new_user_order.id}/pay/',data={"token":"tok_success"})
     assert response.status_code==status.HTTP_200_OK
     assert response.data['State']=='Success'
     new_user_order.refresh_from_db()
@@ -40,7 +40,7 @@ def test_payment_success_path(fake_payment,new_client,new_user,new_user_order):
     assert new_user_order.transaction_id == 'MOCK_SUCCESS'
 
 @pytest.mark.django_db
-@patch('LittleLemonAPI.views.PaymentInterface.make_payment')
+@patch('BrewCafeAPI.views.PaymentInterface.make_payment')
 def test_payment_fail_path(fake_payment,new_client,new_user,new_user_order):
     fake_payment.return_value={
         'success': False,
@@ -48,13 +48,13 @@ def test_payment_fail_path(fake_payment,new_client,new_user,new_user_order):
         'error_code': 'CONNECTION_TIMEOUT'
     }
     new_client.force_authenticate(new_user)
-    response=new_client.post(f'/api/orders/{new_user_order.id}/pay',data={"token":"tok_failed"})
+    response=new_client.post(f'/api/orders/{new_user_order.id}/pay/',data={"token":"tok_failed"})
     assert response.status_code==status.HTTP_400_BAD_REQUEST
     assert response.data['State']=='Failed'
     assert response.data['Reason']=='CONNECTION_TIMEOUT'
 
 @pytest.mark.django_db
-@patch('LittleLemonAPI.views.PaymentInterface.make_payment')
+@patch('BrewCafeAPI.views.PaymentInterface.make_payment')
 def test_payment_path_spy(fake_payment,new_client,new_user,new_user_order):
     fake_payment.return_value={
         'success': False,
@@ -63,7 +63,7 @@ def test_payment_path_spy(fake_payment,new_client,new_user,new_user_order):
     }
     test_token={"token":"tok_failed"}
     new_client.force_authenticate(new_user)
-    response=new_client.post(f'/api/orders/{new_user_order.id}/pay',data=test_token)
+    response=new_client.post(f'/api/orders/{new_user_order.id}/pay/',data=test_token)
     
     fake_payment.assert_called_with(
         new_user_order.id, 
