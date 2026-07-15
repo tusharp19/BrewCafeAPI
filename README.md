@@ -23,4 +23,5 @@ BrewCafe is a production-ready backend REST API built with Python and Django RES
 3. Activate environment: `pipenv shell`
 4. Run migrations: `python manage.py migrate`
 5. Run tests locally: `pytest`
-6. Stress Test: `locust -f locustfile.py`
+6. Generate load testing tokens: `python manage.py generate_tokens`
+7. Stress Test: `locust -f locustfile.py`
