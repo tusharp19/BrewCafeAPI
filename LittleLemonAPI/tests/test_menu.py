@@ -52,39 +52,12 @@ def test_menu_items_are_paginated(new_category,new_client,new_user,item_list):
     assert len(myresponse.data['results'])<myresponse.data['count']
     assert myresponse.data['next'] is not None
 
-@pytest.mark.django_db
-def test_admin_can_add_categories(new_admin,new_client):
-    test_category={'title':'Salads','slug':'salads'}
-    new_client.force_authenticate(user=new_admin)
-    myresponse=new_client.post('/api/categories',data=test_category)
-    assert myresponse.status_code==status.HTTP_201_CREATED
-    assert Category.objects.filter(title='Salads').exists()==True
-
-@pytest.mark.django_db
-def test_admin_can_add_menu_items(new_admin,new_client,new_category):
-    new_client.force_authenticate(user=new_admin)
-    testitem={'title':'Banana Bread', 'price':3.00, 'featured':False,'category':new_category.id}
-    myresponse=new_client.post('/api/menu-items',data=testitem)
-    assert myresponse.status_code==status.HTTP_201_CREATED
-    assert MenuItem.objects.filter(title='Banana Bread').exists()==True
 
 @pytest.mark.django_db
 def test_get_menu_items(new_client):
     myresponse=new_client.get('/api/menu-items')
     assert myresponse.status_code == status.HTTP_200_OK
 
-@pytest.mark.django_db
-def test_unauthenticated_user_cannot_create_item(new_client,new_category):
-    test_item={'title':'Cake','price':10.0,'category':new_category.id}
-    myresponse=new_client.post('/api/menu-items',data=test_item)
-    assert myresponse.status_code == status.HTTP_401_UNAUTHORIZED
-
-@pytest.mark.django_db
-def test_managers_can_create_item(manager_user,new_client,new_category):
-    test_item={'title':'Cake','price':10.0,'category':new_category.id}
-    new_client.force_authenticate(user=manager_user)
-    myresponse=new_client.post('/api/menu-items',data=test_item)
-    assert myresponse.status_code == status.HTTP_201_CREATED
 
 @pytest.mark.django_db
 def test_get_single_menu_item(new_menuitem,new_client):
@@ -95,32 +68,37 @@ def test_get_single_menu_item(new_menuitem,new_client):
 
 
 @pytest.mark.django_db
-def test_non_manager_authenticated_user_cannot_create_item(new_client,new_category,new_user):
-    new_client.force_authenticate(user=new_user)
+@pytest.mark.parametrize("user_fixture,expected_response,created",[
+    ("new_admin",status.HTTP_201_CREATED,True),
+    ("manager_user",status.HTTP_201_CREATED,True),
+    ("new_user",status.HTTP_403_FORBIDDEN,False),
+    ("deliverycrew_user",status.HTTP_403_FORBIDDEN,False),
+    (None,status.HTTP_401_UNAUTHORIZED,False)
+])
+def test_user_group_adds_item(new_client,request,new_category,user_fixture,expected_response,created):
+    if user_fixture:
+        testuser=request.getfixturevalue(user_fixture)
+        new_client.force_authenticate(user=testuser)
+    
     testitem={'title':'Cake','price':10.0,'category':new_category.id}
     myresponse=new_client.post('/api/menu-items',data=testitem)
-    assert myresponse.status_code == status.HTTP_403_FORBIDDEN
-
-@pytest.mark.django_db 
-def test_delivery_crew_cannot_create_item(new_client,new_category,deliverycrew_user):
-    new_client.force_authenticate(user=deliverycrew_user)
-    testitem={'title':'Cake','price':10.0,'category':new_category.id}
-    myresponse=new_client.post('/api/menu-items',data=testitem)
-    assert myresponse.status_code == status.HTTP_403_FORBIDDEN
+    assert myresponse.status_code == expected_response
+    assert MenuItem.objects.filter(title='Cake').exists()==created
 
 @pytest.mark.django_db
-def test_manager_cannot_add_categories(new_client,manager_user):
-    new_client.force_authenticate(user=manager_user)
-    test_category={'title':'Chinese','slug':'chinese'}
-    myresponse=new_client.post('/api/categories',data=test_category)
-    assert myresponse.status_code==status.HTTP_403_FORBIDDEN
+@pytest.mark.parametrize("user_fixture,expected_response,created",[
+    ("new_admin",status.HTTP_201_CREATED,True),
+    ("manager_user",status.HTTP_403_FORBIDDEN,False),
+    ("new_user",status.HTTP_403_FORBIDDEN,False)
+])
+def test_user_group_add_categories(new_client,request,user_fixture,expected_response,created):
+    testuser=request.getfixturevalue(user_fixture)
+    new_client.force_authenticate(user=testuser)
+    testcategory={'title':'Chinese','slug':'chinese'}
+    myresponse=new_client.post('/api/categories',data=testcategory)
+    assert myresponse.status_code==expected_response
+    assert Category.objects.filter(title='Chinese').exists()==created
 
-@pytest.mark.django_db
-def test_customer_cannot_add_categories(new_client,new_user):
-    new_client.force_authenticate(user=new_user)
-    test_category={'title':'Chinese','slug':'chinese'}
-    myresponse=new_client.post('/api/categories',data=test_category)
-    assert myresponse.status_code==status.HTTP_403_FORBIDDEN
 
 @pytest.mark.django_db
 def test_manager_can_update_item_of_day(manager_user,new_client,new_menuitem):

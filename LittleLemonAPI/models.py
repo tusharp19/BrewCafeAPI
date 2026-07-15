@@ -27,12 +27,26 @@ class Cart(models.Model):
     class Meta:
         unique_together=('menuitem', 'user')
 
+class Status(models.TextChoices):
+    PENDING='P','Pending'
+    PROCESSING='PR','Processing'
+    COMPLETED='C','Completed'
+    FAILED='F','Failed'
+
+
+
 class Order(models.Model):
     user=models.ForeignKey(User, on_delete=models.CASCADE)
     delivery_crew=models.ForeignKey(User,on_delete=models.SET_NULL, related_name="delivery_crew", null=True)
     status=models.BooleanField(db_index=True, default=0)
     total=models.DecimalField(max_digits=6, decimal_places=2)
     date=models.DateField(db_index=True)
+    payment_state=models.CharField(db_index=True,max_length=10,choices=Status.choices,default=Status.PENDING)
+    transaction_id=models.CharField(blank=True,null=True,max_length=255)
+    paid_time=models.DateTimeField(blank=True,null=True)
+
+
+
 
 class OrderItem(models.Model):
     order=models.ForeignKey(Order,on_delete=models.CASCADE)

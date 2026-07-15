@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from LittleLemonAPI.models import Cart,Order
+from LittleLemonAPI.models import Cart,Order,Status
 from django.contrib.auth.models import Group,User
 from django.utils import timezone
 
@@ -18,14 +18,8 @@ def test_customers_can_place_orders(new_user,new_client,new_menuitem):
 
 @pytest.mark.django_db
 def test_customer_can_browse_their_orders(new_user,new_client,new_menuitem):
-    item_qty=3
-    item_unitprice=new_menuitem.price
-    total_itemprice=item_qty*item_unitprice
-    Cart.objects.create(user=new_user, menuitem=new_menuitem, 
-                        quantity=item_qty, unit_price=item_unitprice,
-                        price=total_itemprice)
     new_client.force_authenticate(user=new_user)
-    new_client.post('/api/orders')
+    myorder=Order.objects.create(user=new_user, total=20,date=timezone.now().date(),payment_state=Status.COMPLETED)
     first_user_response=new_client.get('/api/orders')
     other_user=User.objects.create_user(username='other_user')
     new_client.force_authenticate(user=other_user)
@@ -44,7 +38,7 @@ def test_manager_assigns_delivery_crew(new_client,manager_user,deliverycrew_user
 
 @pytest.mark.django_db
 def test_delivery_crew_can_change_order_status(deliverycrew_user,new_client,new_user):
-    myorder=Order.objects.create(user=new_user, total=20,delivery_crew=deliverycrew_user,date=timezone.now().date())
+    myorder=Order.objects.create(user=new_user, total=20,delivery_crew=deliverycrew_user,date=timezone.now().date(),payment_state=Status.COMPLETED)
     new_client.force_authenticate(user=deliverycrew_user)
     myresponse=new_client.patch(f'/api/orders/{myorder.id}',data={'status':True})
     assert myresponse.status_code==status.HTTP_200_OK
@@ -66,8 +60,8 @@ def test_delivery_crew_can_view_order(deliverycrew_user,new_client,new_user):
     assert myresponse.status_code==status.HTTP_200_OK
 
 @pytest.mark.django_db
-def test_delivery_crew_can_not_see_other_orers(deliverycrew_user,new_client,new_user):
-    Order.objects.create(user=new_user, total=20,delivery_crew=deliverycrew_user,date=timezone.now().date())
+def test_delivery_crew_cannot_see_other_orers(deliverycrew_user,new_client,new_user):
+    myorder=Order.objects.create(user=new_user, total=20,delivery_crew=deliverycrew_user,date=timezone.now().date(),payment_state=Status.COMPLETED)
     new_client.force_authenticate(user=deliverycrew_user)
     myresponse=new_client.get('/api/orders')
     assert myresponse.status_code==status.HTTP_200_OK

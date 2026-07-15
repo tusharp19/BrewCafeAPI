@@ -1,5 +1,5 @@
 from django.urls import path
-from LittleLemonAPI.views import SingleCategoryView,CategoryView,SingleOrderView,OrderView,MenuItemView, SingleMenuItemView,ManagerView,ManagerDeleteView,DeliveryCrewView,DeliveryCrewDeleteView,CartView
+from LittleLemonAPI.views import OrderPaymentView,SingleCategoryView,CategoryView,SingleOrderView,OrderView,MenuItemView, SingleMenuItemView,ManagerView,ManagerDeleteView,DeliveryCrewView,DeliveryCrewDeleteView,CartView
 
 urlpatterns=[
     path('menu-items',MenuItemView.as_view()),
@@ -11,6 +11,7 @@ urlpatterns=[
     path('cart/menu-items',CartView.as_view()),
     path('orders',OrderView.as_view()),
     path('orders/<int:pk>',SingleOrderView.as_view()),
+    path('orders/<int:pk>/pay',OrderPaymentView.as_view()),
     path('categories',CategoryView.as_view()),
     path('categories/<int:pk>',SingleCategoryView.as_view()),
 ]

@@ -1,12 +1,18 @@
 import pytest
 from rest_framework.test import APIClient
-from LittleLemonAPI.models import Category,MenuItem
+from LittleLemonAPI.models import Category,MenuItem,Order
 from django.contrib.auth.models import Group,User
+from django.utils import timezone
 
 @pytest.fixture
 def new_user(db):
     testuser=User.objects.create_user(username='testuser')
     return testuser
+
+@pytest.fixture
+def other_user(db):
+    otheruser=User.objects.create_user(username='otheruser')
+    return otheruser
 
 @pytest.fixture
 def manager_user(db):
@@ -41,4 +47,9 @@ def new_menuitem(new_category,db):
 def new_client():
     myclient=APIClient()
     return myclient
+
+@pytest.fixture
+def new_user_order(db,new_user):
+    new_order=Order.objects.create(user=new_user,total=500,date=timezone.now().date())
+    return new_order
     

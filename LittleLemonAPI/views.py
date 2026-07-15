@@ -1,12 +1,14 @@
 from django.shortcuts import render, get_object_or_404
 from rest_framework import generics,status
 from rest_framework.response import Response
-from .models import MenuItem,Cart,Order,OrderItem,Category
+from .models import Status,MenuItem,Cart,Order,OrderItem,Category
 from django.contrib.auth.models import Group,User
 from .serializers import MenuItemSerializer,UserSerializer,CartSerializer,OrderSerializer,CategorySerializer
-from .permissions import IsManager
+from .permissions import IsManager,OrderBelongsToUser
 from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from django.utils import timezone
+from django.db import transaction
+from .payment import PaymentInterface
 
 class MenuItemView(generics.ListCreateAPIView):
     queryset=MenuItem.objects.all()
@@ -161,11 +163,13 @@ class OrderView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         if self.request.user.groups.filter(name='Manager').exists():
-            queryset= Order.objects.select_related('user', 'delivery_crew')
+            queryset= Order.objects.filter(payment_state=Status.COMPLETED).select_related('user', 'delivery_crew')
         elif self.request.user.groups.filter(name='Delivery crew').exists():
-            queryset= Order.objects.filter(delivery_crew=self.request.user).select_related('user','delivery_crew')
+            queryset= Order.objects.filter(payment_state=Status.COMPLETED).filter(delivery_crew=self.request.user).select_related('user','delivery_crew')
         else:
-            queryset=Order.objects.filter(user=self.request.user).select_related('user','delivery_crew')
+            queryset=Order.objects.filter(user=self.request.user,
+                                          payment_state__in=[Status.COMPLETED, Status.FAILED]
+                                          ).select_related('user','delivery_crew')
         
         status_param = self.request.query_params.get('status')
         date_param = self.request.query_params.get('date')
@@ -197,7 +201,7 @@ class OrderView(generics.ListCreateAPIView):
                 new_orderitem=OrderItem(order=new_order,menuitem=item.menuitem,quantity=item.quantity,unit_price=item.unit_price,price=item.price)
                 orderitem_list.append(new_orderitem)
             OrderItem.objects.bulk_create(orderitem_list)
-            Cart.objects.filter(user=request.user).delete()
+            #Cart.objects.filter(user=request.user).delete()
             serializer=self.get_serializer(new_order)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         
@@ -254,4 +258,44 @@ class SingleOrderView(generics.RetrieveUpdateDestroyAPIView):
         if user.groups.filter(name='Manager').exists():
             return super().destroy(request,*args,**kwargs)
         return Response(status=status.HTTP_403_FORBIDDEN)
+    
+class OrderPaymentView(generics.GenericAPIView):
+    permission_classes=[IsAuthenticated,OrderBelongsToUser]
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).select_for_update()
+    
+    def post(self,request,*args,**kwargs):
+        with transaction.atomic():
+            order=self.get_object()
+            self.check_object_permissions(request,order)
+            if order.payment_state==Status.COMPLETED or order.payment_state==Status.PROCESSING:
+                return Response(
+                        data={'State': 'Error', 'Reason': 'Payment already processed or in progress.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+        
+            token = request.data.get('token')
+            if not token:
+                return Response(
+                    data={'error': 'Payment token is required.'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            order.payment_state= Status.PROCESSING
+            order.save()
 
+        response=PaymentInterface.make_payment(order.id,order.total,token)
+        if response['success']:
+            with transaction.atomic():
+                order.payment_state=Status.COMPLETED
+                order.transaction_id=response['transaction_id']
+                order.save()
+                Cart.objects.filter(user=request.user).delete()
+            return Response(data={'State':'Success'},status=status.HTTP_200_OK)
+        else:
+            with transaction.atomic():
+                order=self.get_object()
+                self.check_object_permissions(request, order)
+                order.payment_state=Status.FAILED
+                order.save()
+            return Response(data={'State':'Failed', 'Reason':response['error_code']},
+                            status=status.HTTP_400_BAD_REQUEST)
